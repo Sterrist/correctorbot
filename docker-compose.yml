@@ -1,0 +1,27 @@
+name: corrector-bot
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: corrector-bot
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    networks:
+      dokploy-network: {}
+      vpn_ingress:
+        gw_priority: 1
+
+networks:
+  vpn_ingress:
+    external: true
+    name: vpn_ingress
+
+  dokploy-network:
+    external: true
+    name: dokploy-network
