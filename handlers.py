@@ -50,6 +50,10 @@ async def correct_message_text(message: Message) -> None:
 
     mode, text = parsed_message
 
+    if not corrector.supports_mode(mode):
+        logger.warning("Получен неизвестный режим: %s", mode)
+        return
+
     corrected_text = await corrector.correct_text(
         text=text,
         mode=mode,
@@ -75,6 +79,10 @@ async def correct_message_caption(message: Message) -> None:
         return
 
     mode, text = parsed_message
+
+    if not corrector.supports_mode(mode):
+        logger.warning("Получен неизвестный режим: %s", mode)
+        return
 
     corrected_text = await corrector.correct_text(
         text=text,
