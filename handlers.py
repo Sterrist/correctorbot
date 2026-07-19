@@ -10,7 +10,6 @@ router = Router()
 corrector = OpenAICorrector(
     base_url=settings.OPENAI_BASE_URL,
     api_key=settings.OPENAI_API_KEY.get_secret_value(),
-    system_prompt=settings.OPENAI_SYSTEM_PROMPT,
     model=settings.OPENAI_MODEL
 )
 
