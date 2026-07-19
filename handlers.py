@@ -3,6 +3,7 @@ from aiogram.types import Message
 from logging import getLogger
 from corrector import OpenAICorrector
 from config import settings
+import re
 
 router = Router()
 
@@ -15,13 +16,37 @@ corrector = OpenAICorrector(
 
 logger = getLogger(__name__)
 
+MODE_PATTERN = re.compile(
+    r"^\.\.\.(?:\[(?P<mode>[a-z_]+)\])?\s*(?P<text>.*)$",
+    re.DOTALL,
+)
+
+def parse_message(value: str) -> tuple[str | None, str] | None:
+    match = MODE_PATTERN.fullmatch(value)
+
+    if match is None:
+        return None
+
+    mode = match.group("mode")
+    text = match.group("text").strip()
+
+    if not text:
+        return None
+
+    return mode, text
+
 @router.business_message(F.text.startswith('...'))
 async def correct_message_text(m: Message):
     clear_text = m.text.removeprefix("...").lstrip()
     if not clear_text:
         return
 
-    corrected_text = await corrector.correct_text(clear_text)
+    mode, text = parse_message(m.text)
+
+    corrected_text = await corrector.correct_text(
+        text=text,
+        mode=mode
+    )
 
     await m.edit_text(corrected_text)
 
@@ -37,7 +62,12 @@ async def correct_message_caption(m: Message):
     if not clear_text:
         return
 
-    corrected_text = await corrector.correct_text(clear_text)
+    mode, text = parse_message(m.caption)
+
+    corrected_text = await corrector.correct_text(
+        text=text,
+        mode=mode
+    )
 
     await m.edit_caption(corrected_text)
 
