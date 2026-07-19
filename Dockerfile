@@ -11,12 +11,19 @@ ENV UV_COMPILE_BYTECODE=1 \
 COPY pyproject.toml uv.lock ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync \
+        --frozen \
+        --no-install-project \
+        --no-dev \
+        --python /usr/local/bin/python3
 
 COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev
+    uv sync \
+        --locked \
+        --no-dev \
+        --python /usr/local/bin/python3
 
 
 FROM python:3.12-slim
