@@ -1,19 +1,18 @@
-from aiogram import Router, F
-from aiogram.types import Message
-from logging import getLogger
-from corrector import OpenAICorrector
-from config import settings
 import re
+from logging import getLogger
+from aiogram import F, Router
+from aiogram.types import Message
+from config import settings
+from corrector import OpenAICorrector
 
 router = Router()
+logger = getLogger(__name__)
 
 corrector = OpenAICorrector(
     base_url=settings.OPENAI_BASE_URL,
     api_key=settings.OPENAI_API_KEY.get_secret_value(),
-    model=settings.OPENAI_MODEL
+    model=settings.OPENAI_MODEL,
 )
-
-logger = getLogger(__name__)
 
 MODE_PATTERN = re.compile(
     r"^\.\.\.(?:\[(?P<mode>[a-z_]+)\])?\s*(?P<text>.*)$",
@@ -34,44 +33,62 @@ def parse_message(value: str) -> tuple[str | None, str] | None:
 
     return mode, text
 
-@router.business_message(F.text.startswith('...'))
-async def correct_message_text(m: Message):
-    clear_text = m.text.removeprefix("...").lstrip()
-    if not clear_text:
+def get_reply_context(message: Message) -> str | None:
+    replied_message = message.reply_to_message
+
+    if replied_message is None:
+        return None
+
+    return replied_message.text or replied_message.caption
+
+@router.business_message(F.text.startswith("..."))
+async def correct_message_text(message: Message) -> None:
+    parsed_message = parse_message(message.text)
+
+    if parsed_message is None:
         return
 
-    mode, text = parse_message(m.text)
+    mode, text = parsed_message
 
     corrected_text = await corrector.correct_text(
         text=text,
-        mode=mode
+        mode=mode,
+        context=get_reply_context(message),
     )
 
-    await m.edit_text(corrected_text)
+    await message.edit_text(
+        text=corrected_text,
+        parse_mode=None,
+    )
 
     logger.info(
         "Скорректирован текст для @%s (%s)",
-        m.from_user.username or m.from_user.full_name,
-        m.from_user.id,
+        message.from_user.username or message.from_user.full_name,
+        message.from_user.id,
     )
 
-@router.business_message(F.caption.startswith('...'))
-async def correct_message_caption(m: Message):
-    clear_text = m.caption.removeprefix("...").lstrip()
-    if not clear_text:
+@router.business_message(F.caption.startswith("..."))
+async def correct_message_caption(message: Message) -> None:
+    parsed_message = parse_message(message.caption)
+
+    if parsed_message is None:
         return
 
-    mode, text = parse_message(m.caption)
+    mode, text = parsed_message
 
     corrected_text = await corrector.correct_text(
         text=text,
-        mode=mode
+        mode=mode,
+        context=get_reply_context(message),
     )
 
-    await m.edit_caption(corrected_text)
+    await message.edit_caption(
+        caption=corrected_text,
+        parse_mode=None,
+    )
 
     logger.info(
         "Скорректирована подпись для @%s (%s)",
-        m.from_user.username or m.from_user.full_name,
-        m.from_user.id,
+        message.from_user.username or message.from_user.full_name,
+        message.from_user.id,
     )
