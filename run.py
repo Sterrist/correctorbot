@@ -8,6 +8,7 @@ from handlers import router
 from middleware import UserMiddleware
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger('aiogram.event').setLevel(level=logging.warning)
 
 dp = Dispatcher()
 dp.business_message.middleware(UserMiddleware())
